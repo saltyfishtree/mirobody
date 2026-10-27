@@ -93,7 +93,7 @@ if __name__ == "__main__":  # runs without pytest, same as the axis test
         except AssertionError as exc:
             failures += 1
             print(f"  FAIL {name}: {str(exc)[:200]}")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failures += 1
             print(f"  ERROR {name}: {exc!r}")
     raise SystemExit(1 if failures else 0)

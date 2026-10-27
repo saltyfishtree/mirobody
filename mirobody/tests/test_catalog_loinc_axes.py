@@ -120,7 +120,7 @@ def test_component_mentions_the_analyte():
             continue
         component = (axis[6] or "").lower()
         analyte = (m.display or m.name or "").lower()
-        words = [w for w in re.findall(r"[a-z]{4,}", analyte)]
+        words = re.findall(r"[a-z]{4,}", analyte)
         if component and words and not any(w in component for w in words):
             # `phosphate` is printed `phosphorus` in NHANES; compare stems too
             stems = {w[:4] for w in words}
@@ -144,7 +144,7 @@ if __name__ == "__main__":  # `python test_catalog_loinc_axes.py` without pytest
         except AssertionError as exc:
             failures += 1
             print(f"  FAIL {name}: {str(exc)[:200]}")
-        except Exception as exc:  # noqa: BLE001 - a runner, not a library
+        except Exception as exc:
             failures += 1
             print(f"  ERROR {name}: {exc!r}")
     raise SystemExit(1 if failures else 0)

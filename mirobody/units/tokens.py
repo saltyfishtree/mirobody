@@ -93,7 +93,6 @@ ALIASES: dict[str, list[str]] = {
     'mmol/kg': ['mmol/Kg', 'mmol/kg', 'mmol/kg BW'],
     'kcal/d': ['kcal/day', 'kcal/Day', 'Cal/day'],
 '[IU]/h': ['IU/H', 'IU/h', 'IU/hr', 'IU/Hr', 'iu/h', 'IU per hour'],
-    'kg/m2': ['kg/m**2', 'kg/m^2', 'kg/m²', 'kg / m**2', 'kg/m2 '],
 
     # ── Printed spellings measured on real reports, 2026-09 ───────────────
     # Every entry below was a string a US, Chinese or Japanese lab actually
@@ -137,7 +136,7 @@ ALIASES: dict[str, list[str]] = {
     'kW': ['kilowatt', 'kilowatts', '千瓦', 'キロワット'],
     'kcal': ['Cal', 'Cals', 'calorie', 'calories', 'Kcal', 'KCAL', 'kilocalorie', 'kilocalories', '千卡', '大卡', '卡路里', '카로리', '칼로리', '킬로칼로리', 'カロリー', 'キロカロリー', 'ккал', 'Калории', 'Kalorie', 'Kalorien', 'caloría', 'calorías'],
     'kg': ['kg', 'KG', 'kilograms'],
-    'kg/m2': ['kg/m^2', 'kg/m²'],
+    'kg/m2': ['kg/m^2', 'kg/m²', 'kg/m**2', 'kg / m**2'],
     'm': ['m', 'meters'],
     'm2': ['SQM', 'm2', 'm^2'],
     'mL': ['ML', 'ml'],

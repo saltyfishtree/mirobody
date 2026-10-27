@@ -13,7 +13,7 @@ implementation would get wrong:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 from zoneinfo import ZoneInfo
 
 from mirobody.standardize.local_day import local_day, resolve_tz, zone_for
@@ -24,7 +24,7 @@ SHANGHAI = "Asia/Shanghai"
 
 def at(y, mo, d, h, mi, tz=NEW_YORK):
     """An instant written in the local wall clock, returned as UTC."""
-    return datetime(y, mo, d, h, mi, tzinfo=ZoneInfo(tz)).astimezone(timezone.utc)
+    return datetime(y, mo, d, h, mi, tzinfo=ZoneInfo(tz)).astimezone(UTC)
 
 
 def test_calendar_day_is_the_local_date():
@@ -43,7 +43,7 @@ def test_sleep_window_opens_at_eighteen():
 
 def test_the_same_instant_is_a_different_date_in_another_zone():
     """23:30 UTC is still the 10th in New York and already the 11th in Shanghai."""
-    instant = datetime(2024, 3, 10, 23, 30, tzinfo=timezone.utc)
+    instant = datetime(2024, 3, 10, 23, 30, tzinfo=UTC)
     assert local_day(instant, NEW_YORK) == datetime(2024, 3, 10).date()
     assert local_day(instant, SHANGHAI) == datetime(2024, 3, 11).date()
 
@@ -54,7 +54,7 @@ def test_a_fixed_offset_places_the_day_but_is_tagged_as_such():
     tz, source = resolve_tz("UTC+08:00", "UTC")
     assert tz == "UTC+08:00"
     assert source == "offset-only"
-    instant = datetime(2024, 3, 10, 23, 30, tzinfo=timezone.utc)
+    instant = datetime(2024, 3, 10, 23, 30, tzinfo=UTC)
     assert local_day(instant, tz) == datetime(2024, 3, 11).date()
 
 
@@ -94,7 +94,7 @@ if __name__ == "__main__":  # runs without pytest
         except AssertionError as exc:
             failures += 1
             print(f"  FAIL {name}: {str(exc)[:180]}")
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             failures += 1
             print(f"  ERROR {name}: {exc!r}")
     raise SystemExit(1 if failures else 0)
