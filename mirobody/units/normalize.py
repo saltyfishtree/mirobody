@@ -296,14 +296,16 @@ def normalize_unit(text: str | None) -> str | None:
         if hit is not None:
             return hit
     # A preparation printed beside its unit: `Novolin R, IU`, `胰岛素, IU`.
-    # The unit is what follows the last comma; the prefix is a drug or
-    # formulation name we have no business interpreting. Reached only after
-    # every other path missed, so a comma inside a real unit has already been
-    # cleaned away.
+    # A second recognized unit makes this ambiguous: picking the last of
+    # `mg/dL, mmol/L` silently changes a glucose conversion by a factor of 18.
     if "," in cleaned or "，" in cleaned:
-        tail = re.split(r"[,，]", cleaned)[-1].strip()
-        if tail and tail != cleaned:
-            return _resolve_strict(tail)
+        parts = re.split(r"[,，]", cleaned)
+        tail = _resolve_strict(parts[-1])
+        if tail is not None:
+            if any((other := _resolve_strict(part)) is not None and other != tail
+                   for part in parts[:-1]):
+                return None
+            return tail
     return None
 
 

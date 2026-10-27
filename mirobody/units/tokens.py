@@ -87,12 +87,12 @@ ALIASES: dict[str, list[str]] = {
     # before this: the canonical is the UCUM composition, so the table is the
     # right place rather than a rule. `kg/m**2` is NIH/CDC's exponent spelling
     # of the BMI unit (NHANES body-measures labels use it verbatim).
-        # Substance per mass (`mmol/kg`) and energy per day (`kcal/day`): both are
+    # Substance per mass (`mmol/kg`) and energy per day (`kcal/day`): both are
     # ordinary UCUM compositions that the tokenizer cannot build because `Kg`
     # is a different spelling of the kilogram and `day` is a word, not a unit.
     'mmol/kg': ['mmol/Kg', 'mmol/kg', 'mmol/kg BW'],
     'kcal/d': ['kcal/day', 'kcal/Day', 'Cal/day'],
-'[IU]/h': ['IU/H', 'IU/h', 'IU/hr', 'IU/Hr', 'iu/h', 'IU per hour'],
+    '[IU]/h': ['IU/H', 'IU/h', 'IU/hr', 'IU/Hr', 'iu/h', 'IU per hour'],
 
     # ── Printed spellings measured on real reports, 2026-09 ───────────────
     # Every entry below was a string a US, Chinese or Japanese lab actually

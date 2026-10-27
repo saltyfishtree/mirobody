@@ -2,7 +2,7 @@
 
 `normalize_unit` answering UCUM only says the unit was recognised. Whether a
 value becomes the right number is a different mechanism: mass <-> substance
-needs the analyte's molar mass, keyed by LOINC code in `translate.canonical_units`.
+needs the analyte's molar mass, keyed by LOINC code in `units.convert`.
 A wrong molar mass turned 150 mg/dL of triglyceride into 3.88 mmol/L instead of
 1.69 — the module comments record that exact bug, which is why this test exists.
 
@@ -80,6 +80,29 @@ def test_unknown_unit_is_refused_not_guessed():
     out = _convert("furlongs", "m", 1.0, "")
     assert out.get("converted") is None, out
     assert out.get("reason"), out
+
+
+def test_printed_unit_spellings_normalize_without_changing_their_scale():
+    from mirobody.units import normalize_unit, parse_value_unit
+
+    spellings = {
+        "kg/m**2": "kg/m2", "ｋｇ／ｍ＊＊２": "kg/m2", "Novolin R, IU": "[IU]",
+        "胰岛素，IU": "[IU]", "ohms": "Ohm", "1000 cell/uL": "10*3/uL",
+        "million cells/uL": "10*6/uL", "mmol/Kg": "mmol/kg", "kcal/day": "kcal/d",
+    }
+    for printed, expected in spellings.items():
+        assert normalize_unit(printed) == expected, printed
+    for printed, expected in (("24 kg/m**2", "kg/m2"), ("240 1000 cell/uL", "10*3/uL"),
+                              ("4.5 million cells/uL", "10*6/uL")):
+        assert parse_value_unit(printed).unit == expected, printed
+
+
+def test_comma_separated_competing_units_are_refused():
+    from mirobody.units import normalize_unit
+
+    for printed in ("mg/dL, mmol/L", "mmol/L, mg/dL", "mg/dL, mg/L", "mg/dL，mmol/L"):
+        assert normalize_unit(printed) is None, printed
+        assert _convert(printed, "mg/dL", 90.0, "2339-0")["converted"] is None
 
 
 if __name__ == "__main__":  # runs without pytest, same as the axis test

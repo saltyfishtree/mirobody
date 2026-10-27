@@ -157,7 +157,7 @@ SLEEP_PERFORMANCE	sleepPerformance	Sleep Performance	Sleep Metrics	%	%	series	se
 SLEEP_QUALITY	sleepQuality	Sleep Quality	Sleep Metrics	%	%	series	instant	last			18:00				Sleep quality score	1.4.0
 SLEEP_UNSPECIFIED	sleepAnalysis_Asleep(Unspecified)	Sleep Unspecified	Sleep Metrics	ms	ms	series	interval	duration_union	93832-4	confident	18:00				Unclassified sleep time	1.4.0
 SPEED	speeds	Speed	Activity Metrics	m/s	m/s	series	instant	last			00:00				Exercise speed	1.4.0
-WALKING_SPEED	walkingSpeeds	Walking Speed	Activity Metrics	m/s	m/s	series	instant	mean_min_max	41956-4	confident	00:00		avg,max		Walking speed	1.4.0
+WALKING_SPEED	walkingSpeeds	Walking Speed	Activity Metrics	m/s	m/s	series	instant	mean_min_max			00:00		avg,max		Walking speed	1.4.0
 STEPS	steps	Steps	Activity Metrics	count	{#}	series	cumulative	sum_delta	55423-8	confident	00:00		total		Walking step count	1.4.0
 STEP_DURATION	stepDuration	Step Duration	Activity Metrics	ms	ms	series	instant	last			00:00				Walking step duration	1.4.0
 DAILY_STEPS	dailySteps	Daily Steps	Activity Metrics	count	{#}	summary	provider_daily	provider_value	41950-7	confident	00:00				Daily total step count summary	1.4.0
@@ -326,7 +326,7 @@ URATE	urate	Urate	Medical Metrics	mg/dL	mg/dL	series	instant	last	3084-1	confide
 BILIRUBIN	bilirubin	Bilirubin	Medical Metrics	mg/dL	mg/dL	series	instant	last	1975-2	confident	00:00		last		Bilirubin.total [Mass/volume] in Serum or Plasma	1.4.0
 ALBUMIN	albumin	Albumin	Medical Metrics	g/dL	g/dL	series	instant	last	1751-7	confident	00:00		last		Albumin [Mass/volume] in Serum or Plasma	1.4.0
 PROTEIN	protein	Protein	Medical Metrics	g/dL	g/dL	series	instant	last	2885-2	confident	00:00		last		Protein [Mass/volume] in Serum or Plasma	1.4.0
-SODIUM	sodium	Sodium	Medical Metrics	mmol/L	mmol/L	series	instant	last	2951-2	confident	00:00		last		Sodium [Moles/volume] in Serum or Plasma	1.4.0
+SODIUM	serumSodium	Sodium	Medical Metrics	mmol/L	mmol/L	series	instant	last	2951-2	confident	00:00		last		Sodium [Moles/volume] in Serum or Plasma	1.4.0
 POTASSIUM	potassium	Potassium	Medical Metrics	mmol/L	mmol/L	series	instant	last	2823-3	confident	00:00		last		Potassium [Moles/volume] in Serum or Plasma	1.4.0
 CHLORIDE	chloride	Chloride	Medical Metrics	mmol/L	mmol/L	series	instant	last	2075-0	confident	00:00		last		Chloride [Moles/volume] in Serum or Plasma	1.4.0
 BICARBONATE	bicarbonate	Bicarbonate	Medical Metrics	mmol/L	mmol/L	series	instant	last	1959-6	confident	00:00		last		Bicarbonate [Moles/volume] in Blood	1.4.0
