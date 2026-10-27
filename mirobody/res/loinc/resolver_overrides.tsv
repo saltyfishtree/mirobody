@@ -1352,3 +1352,9 @@ MTHFR 基因型	!unresolved
 APOE 基因检测	!unresolved
 HLA-B 基因型	!unresolved
 HLA-B*5801 基因型	!unresolved
+
+# --- LOINC-derived names (2026-10-27, standardize_build/loinc_aliases.py) ---
+# Official designations of catalogue codes that the index did not answer yet.
+Oxygen consumption (VO2)/Body weight [Volume Rate Content] --peak during exercise	VO2/BW max dur exercise
+Oxygen consumption/Body weight^peak during exercise	VO2/BW max dur exercise
+Oxygen saturation in Arterial blood by Pulse oximetry	SaO2 % BldA PulseOx
