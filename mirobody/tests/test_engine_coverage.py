@@ -1448,3 +1448,34 @@ def test_a_posting_row_is_an_axis_row_and_never_a_skipped_code(resolver):
     skipped = set((read_member("loinc_skip.txt") or b"").split())
     assert skipped, "loinc_skip.txt is missing or empty"
     assert skipped.isdisjoint(axis.field_raw(row, AXIS_CODE) for row in range(len(axis)))
+
+
+def test_every_decoded_vendor_crosswalk_agrees_with_its_decoder():
+    """A vendor with a decoder has two descriptions of the same field: the
+    public table under res/crosswalks/ and the code in kernel/decoders/. They
+    are corrected by different hands and nothing compared them: oura drifted in
+    9 rows and whoop in 10 (2026-10-28), including `cycle.kilojoule`, where the
+    table still said `activeCalories` while the decoder had moved to
+    `dailyTotalCalories` because the active figure double-counts a day's
+    workouts.
+
+    Only rows where both sides name a metric are compared: a table row with no
+    metric is a decision not to map, and the decoder's own coverage is its
+    business.
+    """
+    from mirobody.kernel import decoders
+    from mirobody.standardize import devices
+
+    checked = 0
+    for vendor in ("oura", "whoop"):
+        module = getattr(decoders, vendor)
+        mapping = getattr(module, "MAPPING", {})
+        for row in devices.vendor_fields(vendor):
+            entry = mapping.get(row.type, {}).get(row.field)
+            if entry is None or not row.metric:
+                continue
+            decoded = entry[0] if isinstance(entry, (tuple, list)) else entry
+            assert decoded == row.metric, (
+                f"{vendor}:{row.key}: table says {row.metric}, decoder files {decoded}")
+            checked += 1
+    assert checked >= 40, checked

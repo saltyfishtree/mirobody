@@ -24,23 +24,23 @@
 type	field	metric	loinc	confidence	note
 sleep	average_hrv	hrvRMSSD			Oura 的 HRV 是 RMSSD（spec 本身未声明算法；Oura 公开文档与第三方验证文献一致确认为 rMSSD）。LOINC 无 RMSSD 码。印证归一化风险：把 Oura 同步进 Apple Health 会把 RMSSD 写入 SDNN 类型的字段
 sleep	hrv	hrvDatas			5 分钟粒度 RMSSD 时间序列（PublicSample: interval + items）。同上无码；且不可落 `112429-6`（那是 SDNN）
-sleep	average_heart_rate	dailySleepAvgHeartRate	103205-1	confident	Mean heart rate（2.75）
-sleep	lowest_heart_rate	dailySleepLowestHeartRate	103222-6	confident	Heart rate.minimum（2.75）
+sleep	average_heart_rate	dailyHeartRateAvg	103205-1	confident	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailySleepAvgHeartRate
+sleep	lowest_heart_rate	dailyHeartRateMin	103222-6	confident	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailySleepLowestHeartRate
 sleep	heart_rate	heartRates	8867-4	unverified	5 分钟粒度心率序列；`8867-4` 是 Pt 瞬时,序列点可落,但聚合层不可
-sleep	average_breath	dailySleepRespiratoryRate	103217-6	unverified	睡眠期间平均呼吸率；`103217-6` 有轴缺陷,(see docs/device-crosswalk.md)
+sleep	average_breath	respiratoryRates	9279-1	unverified	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailySleepRespiratoryRate
 sleep	total_sleep_duration	dailyTotalSleepTime	93832-4	confident	Sleep duration
 sleep	time_in_bed	sleepAnalysis_InBed	103213-5	confident	Duration in bed
-sleep	deep_sleep_duration	dailyDeepSleep	93831-6	confident	Deep sleep duration
-sleep	light_sleep_duration	dailyLightSleep	93830-8	confident	Light sleep duration
-sleep	rem_sleep_duration	dailyRemSleep	93829-0	confident	REM sleep duration
-sleep	awake_time	dailyAwakeTime	103210-1	unverified	Awakening duration
-sleep	latency	dailySleepLatency	103212-7	confident	Duration of falling asleep（2.75）
+sleep	deep_sleep_duration	sleepAnalysis_Asleep(Deep)	93831-6	confident	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailyDeepSleep
+sleep	light_sleep_duration	sleepAnalysis_Asleep(Core)	93830-8	confident	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailyLightSleep
+sleep	rem_sleep_duration	sleepAnalysis_Asleep(REM)	93829-0	confident	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailyRemSleep
+sleep	awake_time	sleepAnalysis_Awake	103210-1	unverified	与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailyAwakeTime
+sleep	latency	sleepLatency			与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 dailySleepLatency
 sleep	efficiency	sleepEfficiency			LOINC 无睡眠效率码
 sleep	restless_periods	sleepDisturbances	103211-9	unverified	「不安宁时段数」≠「觉醒次数」,语义近似但非同名,须核
 sleep	sleep_phase_5_min				编码字符串（每字符一个 5 分钟分期）。落码前须先解码展开成分期时长
 sleep	type				枚举 deleted / sleep / long_sleep / late_nap / rest。建议用作分流键：late_nap 应进 napDuration 而非主睡眠
 sleep	readiness_score_delta				厂商专有分的变化量
-daily_sleep	score	sleepQuality			厂商专有睡眠分（0–100）,LOINC 结构性无码。`97891-6 Sleep score [R-Outcomes]` 是特定问卷量表,不可借用
+daily_sleep	score	sleepOverallScore			与 kernel/decoders/oura.py 对齐（运行时真值）；原表写 sleepQuality
 daily_sleep	contributors.*				deep_sleep / efficiency / latency / rem_sleep / restfulness / timing / total_sleep 七个贡献度分项,都是专有分
 daily_spo2	spo2_percentage.average	oxygenSaturations	59408-5	unverified	日均血氧；日均口径亦可用 103209-3（PROPERTY=NRat 有缺陷）
 daily_spo2	breathing_disturbance_index				厂商专有指数。注意：不是 AHI,不可落 `69990-0`
