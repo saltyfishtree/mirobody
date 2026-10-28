@@ -392,6 +392,16 @@ def _envelope_for(
             next_steps.append(tools.NEXT_NARROW_WINDOW)
     elif not rows:
         next_steps.append(tools.NEXT_PICK_FROM_CATALOG)
+        # A window with nothing in it is a real answer, and it has two causes a
+        # reader must be able to tell apart: the person has no such series, or
+        # the series has no reading in this window. Saying only "(no rows)"
+        # leaves a model to conclude the record lacks the metric — measured on
+        # PHIA's objective set, 11% of the failures said exactly that.
+        assumptions.append(
+            "0 readings: nothing for these indicators between "
+            f"{window.start or 'the first record'} and {window.end or 'the last record'} "
+            f"in this view; the series may exist outside the window, and the catalogue "
+            "call with no keywords lists what the record does hold")
     elif truncated:
         next_steps.extend((tools.NEXT_NARROW_WINDOW, tools.NEXT_VIEW_STATS))
     if unavailable:

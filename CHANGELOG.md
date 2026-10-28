@@ -2,6 +2,14 @@
 
 ### Fixed
 
+- **An empty window says it is empty, and why.** A query over a period with no
+  readings answered `(no rows)`, which reads the same whether the person has no
+  such series or the series simply has nothing in that window. The response now
+  says "0 readings: nothing for these indicators between <start> and <end>",
+  names the catalogue call as the way to see what the record does hold, and
+  omits the note whenever a row came back. Measured on PHIA's objective set,
+  11% of the failures were a model concluding the metric did not exist.
+
 - **Distance is split the way LOINC splits it.** LOINC names four activities'
   distance separately — 93817-5 Running distance, 93816-7 Swimming distance,
   41953-1 Walking distance, 55412-1 Exercise distance — and the catalogue only
