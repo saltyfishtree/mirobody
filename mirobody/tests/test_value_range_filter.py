@@ -1,0 +1,46 @@
+"""A counting question has to be expressible, not left to the model.
+
+"How many days did I sleep more than six hours" is a filter plus a count. The
+tool returned the whole series and left both to the model, which a small model
+does not do — asked PHIA's "how many days in the past week did I get less than
+1 hour of deep sleep", a local 2B answered 30.75, a duration, rather than a
+number of days.
+
+`value_min` / `value_max` let the question be asked of the tool, and
+`view="stats"` answers it with `count_in_range` beside the whole-window count.
+These tests pin the parsing and the schema; the SQL is exercised by the
+Postgres suite.
+"""
+
+from __future__ import annotations
+
+from mirobody.kernel import query
+
+
+def test_a_band_parses_into_the_request():
+    request = query.parse_request(
+        {"indicators": ["steps"], "view": "stats", "value_min": 1000, "value_max": 5000})
+    assert (request.value_min, request.value_max) == (1000.0, 5000.0)
+
+
+def test_one_sided_bounds_are_allowed():
+    lower = query.parse_request({"indicators": ["steps"], "value_min": "900"})
+    assert lower.value_min == 900.0 and lower.value_max is None
+    upper = query.parse_request({"indicators": ["steps"], "value_max": 6})
+    assert upper.value_max == 6.0 and upper.value_min is None
+
+
+def test_absent_bounds_stay_absent():
+    request = query.parse_request({"indicators": ["steps"]})
+    assert request.value_min is None and request.value_max is None
+
+
+def test_a_non_numeric_bound_is_ignored_rather_than_fatal():
+    request = query.parse_request({"indicators": ["steps"], "value_min": "abc"})
+    assert request.value_min is None
+
+
+def test_the_schema_offers_both_bounds():
+    properties = query.TOOL_SCHEMA["properties"]
+    assert "value_min" in properties and "value_max" in properties
+    assert properties["value_min"]["type"] == "number"

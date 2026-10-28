@@ -145,6 +145,16 @@ class Selection:
         return "catalog"
 
 
+def _as_float(value: object) -> float | None:
+    """A numeric argument as a float, or None when absent or unparseable."""
+    if value in (None, ""):
+        return None
+    try:
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return None
+
+
 def normalize_list_arg(value: object) -> tuple[str, ...]:
     """Whatever the model sent for a list parameter → clean names. Seen in
     the wild: a JSON-stringified list, a list of JSON strings, a comma-joined
@@ -568,6 +578,17 @@ TOOL_SCHEMA: dict[str, object] = {
             "description": "First local date, inclusive (YYYY-MM-DD, the person's time zone). Omit both dates for the whole record.",
         },
         "end": {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$", "description": "Last local date, inclusive."},
+        "value_min": {
+            "type": "number",
+            "description": "Only readings at or above this value. Answers counting questions "
+                           "exactly ('how many days above 120 bpm', 'how many nights under 6 "
+                           "hours'): with view=stats the reply carries count_in_range beside the "
+                           "whole-window count. The value is in the series' own unit.",
+        },
+        "value_max": {
+            "type": "number",
+            "description": "Only readings at or below this value; combine with value_min for a band.",
+        },
         "view": {
             "type": "string",
             "enum": list(VIEWS),
@@ -599,6 +620,12 @@ class QueryRequest:
     start: str = ""
     end: str = ""
     view: str = "raw"
+    #: A value band, in the series' own unit. "how many days above X" is a
+    #: counting question the tool could not express: it returned the whole
+    #: series and left the filtering to the model, which a small model does
+    #: not do (PHIA's objective set, 2026-10-28).
+    value_min: float | None = None
+    value_max: float | None = None
 
     @property
     def method(self) -> str:
@@ -694,6 +721,8 @@ def parse_request(args: Mapping[str, object]) -> QueryRequest:
         start=str(args.get("start") or ""),
         end=str(args.get("end") or ""),
         view=str(args.get("view") or "raw"),
+        value_min=_as_float(args.get("value_min")),
+        value_max=_as_float(args.get("value_max")),
     )
 
 

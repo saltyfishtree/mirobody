@@ -239,7 +239,7 @@ class HealthIndicatorsService(RecordTool):
             daily = await awaited(hq.buckets(subject_id, sel, window, resolution="day", limit=400))
             return query.trend_rows(daily)
         if method == "stats":
-            return await awaited(hq.stats(subject_id, sel, window))
+            return await awaited(hq.stats(subject_id, sel, window, request.value_min, request.value_max))
         if method == "latest":
             return await awaited(hq.latest(subject_id, sel, window))
         raise ValueError(f"no leaf for method {method!r}")

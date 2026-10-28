@@ -2,6 +2,17 @@
 
 ### Fixed
 
+- **A counting question is now expressible.** "How many days did I sleep more
+  than six hours" is a value band plus a count, and the tool answered it with
+  the whole series, leaving both to the model. Asked PHIA's *"how many days in
+  the past week did I get less than 1 hour of deep sleep"*, a local 2B replied
+  `30.75` — a duration — instead of a number of days. `query_health_indicators`
+  takes `value_min` / `value_max` (in the series' own unit) and `view="stats"`
+  now reports `count_in_range` beside the whole-window count, so the count is
+  read rather than derived. The agent is still the one that has to ask for it:
+  no guidance pointing at this parameter is given to any model, because that
+  would be fitting the prompt to a benchmark rather than fixing the tool.
+
 - **Distance is split the way LOINC splits it.** LOINC names four activities'
   distance separately — 93817-5 Running distance, 93816-7 Swimming distance,
   41953-1 Walking distance, 55412-1 Exercise distance — and the catalogue only
