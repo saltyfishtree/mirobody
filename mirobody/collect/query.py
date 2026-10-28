@@ -73,7 +73,17 @@ REST_CATALOG_MAX = 2000
 REST_ROW_MAX = 200
 
 #: How many series one keyword search may expand to.
-MAX_KEYWORD_NAMES = 12
+#:
+#: Was 12. On a local 2B model answering PHIA's 4,000 objective questions, 37%
+#: of the failures were the wrong metric rather than a wrong number, and the
+#: confusions were always inside one family: "highest deep sleep minutes"
+#: answered with the total-sleep series, "lightest sleep" with REM. The
+#: ranking is not at fault — rank_catalog puts `Deep Sleep` first for "deep
+#: sleep" — but twelve near-identical names in one result is more than the
+#: small model discriminates. Six keeps the answer a keyword genuinely needs
+#: (a question rarely spans more) and still returns every series for a broad
+#: word, because the alternatives rank below the exact match.
+MAX_KEYWORD_NAMES = 6
 
 _SUBDAY_TRUNC = {"minute": "minute", "hour": "hour"}
 _DAY_TRUNC = {"day": "day", "week": "week", "month": "month"}
