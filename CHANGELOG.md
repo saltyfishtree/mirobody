@@ -10,6 +10,17 @@
   on the walking-or-running indicator and answered "how far did I walk" with
   the running figure. The catalogue carries the four now, so a source that
   knows the activity can file it where LOINC puts it.
+- **A vendor's daily distance is not a walking distance.** Six crosswalks filed
+  a *daily total* distance under `walkingRunningDistances`, whose code 112427-0
+  says "Distance walking or running", while the LOINC they listed (103208-5
+  Distance traveled) was a different indicator's. Fitbit's `activities-distance`,
+  Health Connect's `DistanceRecord`, Honor's `distance.read` and Huawei's
+  `...distance.delta` are daily totals and now point at `dailyDistance`
+  (103208-5); Oura's `workout.distance` and WHOOP's `workout.score.distance_meter`
+  are per-workout and point at the new `exerciseDistances` (55412-1). Honor's
+  blood glucose reported in mmol/L now has its own indicator (15074-8) instead
+  of sharing the mg/dL row. `internal/indicators/audit_crosswalks.py` re-checks
+  all ten crosswalks against the catalogue and fails on any disagreement.
 
 - **A keyword search reaches every series that shares a name.** `_by_keywords`
   kept one series per printed or display name (`dict.setdefault`), so when a
