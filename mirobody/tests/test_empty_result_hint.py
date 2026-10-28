@@ -9,6 +9,12 @@ The rendering now says in words which call answers "what do I have".
 
 from __future__ import annotations
 
+import pytest
+
+# Minimal installs have no optional chat dependencies; the tool module imports
+# them, so skip there rather than fail the engine run.
+pytest.importorskip("dotenv")
+
 from mirobody.agent.tools.health_indicators_service import _envelope_for
 from mirobody.kernel import query
 
