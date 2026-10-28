@@ -392,6 +392,15 @@ def _envelope_for(
             next_steps.append(tools.NEXT_NARROW_WINDOW)
     elif not rows:
         next_steps.append(tools.NEXT_PICK_FROM_CATALOG)
+        # Measured on PHIA's objective questions with a local 2B model: 11% of
+        # the failures were the model concluding "I don't have that metric"
+        # while the series existed under a neighbouring name. `next:
+        # pick_from_catalog` is a token, and the small model did not act on it;
+        # saying in words which call answers "what do I have" does.
+        assumptions.append(
+            "nothing matched these keywords; call this tool again with no keywords and no "
+            "indicators to list the indicator names this person actually has, before saying "
+            "the record does not contain what was asked")
     elif truncated:
         next_steps.extend((tools.NEXT_NARROW_WINDOW, tools.NEXT_VIEW_STATS))
     if unavailable:
