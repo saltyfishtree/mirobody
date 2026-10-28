@@ -11,6 +11,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+import pytest
+
+# The engine tests also run on a minimal install that has no optional chat
+# dependencies; the tool module imports them, so skip rather than fail there.
+pytest.importorskip("dotenv")
+
 from mirobody.agent.tools.health_indicators_service import _envelope_for
 from mirobody.kernel import query
 
