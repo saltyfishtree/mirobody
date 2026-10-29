@@ -44,6 +44,20 @@
   `napDuration`. Rows already stored are not rewritten. How to tell:
   `pytest mirobody/tests/test_nightly_sleep_figures.py -k scores`.
 
+- **A workout's time in a heart-rate zone summarises to that time, not to
+  the workout.** WHOOP's zone durations are filed as `workoutDurationLow`,
+  `workoutDurationMedium` and `workoutDurationHigh` with the workout's
+  start..end, and the catalogue gave those rows a sleep stage's shape
+  (`session`/`duration_union`), so `series.aggregate` returned the minutes the
+  workout spans: zones of 20, 10 and 1 minutes in a 60 minute workout each
+  became 60, and two workouts' 20 and 15 low-zone minutes became 90. The rows
+  are now `cumulative`/`sum_delta`, the shape the same workout's
+  `activeCalories` and `exerciseDistances` already have, which gives 20, 10, 1
+  and 35. `data_type`, `window` and `aggregation_methods` are unchanged, so
+  readings land in the same table on the same day; the device bundle carries
+  the new shape and `TERMINOLOGY_VERSION` is 1.5.10. How to tell:
+  `pytest mirobody/tests/test_workout_zones.py`.
+
 - **`view="stats"` exposes a median and sample standard deviation to every
   caller.** These statistics were unavailable, and adding them to the SQL row
   alone still left them hidden from the compact output chat and MCP models

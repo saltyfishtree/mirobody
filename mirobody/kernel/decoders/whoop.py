@@ -87,7 +87,10 @@ MAPPING: dict[str, dict[str, Entry]] = {
 }
 
 #: Heart-rate zones are summed in pairs into the catalogue's three workout
-#: intensity durations; per-zone facts would double-count the workout.
+#: intensity durations. Each is minutes counted inside the workout, so it
+#: keeps the workout's span as the workout's calories and distance do, and the
+#: catalogue sums it: a union of that span read every zone as the whole
+#: workout (20, 10 and 1 minutes of a 60 minute workout each became 60).
 ZONES = (
     ("workoutDurationLow", ("zone_zero_milli", "zone_one_milli")),
     ("workoutDurationMedium", ("zone_two_milli", "zone_three_milli")),
