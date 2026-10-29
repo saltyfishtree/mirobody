@@ -146,13 +146,11 @@ class Selection:
 
 
 def _as_float(value: object) -> float | None:
-    """A numeric argument as a float, or None when absent or unparseable."""
+    """A numeric argument as a float; None when absent. `validate_request`
+    refuses a bound that is not a finite number, so this sees only those."""
     if value in (None, ""):
         return None
-    try:
-        return float(value)  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return None
+    return float(value)  # type: ignore[arg-type]
 
 
 def normalize_list_arg(value: object) -> tuple[str, ...]:
@@ -580,14 +578,17 @@ TOOL_SCHEMA: dict[str, object] = {
         "end": {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$", "description": "Last local date, inclusive."},
         "value_min": {
             "type": "number",
-            "description": "Only readings at or above this value. Answers counting questions "
-                           "exactly ('how many days above 120 bpm', 'how many nights under 6 "
-                           "hours'): with view=stats the reply carries count_in_range beside the "
-                           "whole-window count. The value is in the series' own unit.",
+            "description": "With view=stats: count the readings at or above this value. The reply "
+                           "keeps count and days for the whole window and adds count_in_range "
+                           "(readings in the band) and days_in_range (days with at least one reading "
+                           "in it), so 'how many days above 120 bpm' is days_in_range. The bound is "
+                           "in the unit the stats row reports: call stats once without it to read "
+                           "that unit (sleep durations are in ms). Other views ignore it.",
         },
         "value_max": {
             "type": "number",
-            "description": "Only readings at or below this value; combine with value_min for a band.",
+            "description": "With view=stats: count the readings at or below this value; combine "
+                           "with value_min for a band.",
         },
         "view": {
             "type": "string",
@@ -620,10 +621,10 @@ class QueryRequest:
     start: str = ""
     end: str = ""
     view: str = "raw"
-    #: A value band, in the series' own unit. "how many days above X" is a
-    #: counting question the tool could not express: it returned the whole
-    #: series and left the filtering to the model, which a small model does
-    #: not do (PHIA's objective set, 2026-10-28).
+    #: A value band, in the unit the stats row reports. "how many days above
+    #: X" is a counting question the tool could not express: it returned the
+    #: whole series and left the filtering to the model, which a small model
+    #: does not do (PHIA's objective set, 2026-10-28).
     value_min: float | None = None
     value_max: float | None = None
 
@@ -638,6 +639,17 @@ class QueryRequest:
         """A view was named with nothing selected: the catalogue answers, and
         the caller should say the view waits for the names it lists."""
         return self.selection.kind == "catalog" and self.view != "raw"
+
+    @property
+    def banded(self) -> bool:
+        return self.value_min is not None or self.value_max is not None
+
+    @property
+    def band_unapplied(self) -> bool:
+        """A band was given to a view that does not count: answered as
+        asked, and said, as `view_unapplied` is, rather than refused into a
+        retry loop."""
+        return self.banded and self.method != "stats"
 
 
 @dataclass(frozen=True)
@@ -686,10 +698,32 @@ def reject_dates(args: Mapping[str, object]) -> list[Rejection]:
     return out
 
 
+def reject_bounds(args: Mapping[str, object]) -> list[Rejection]:
+    """``value_min``/``value_max`` that are not a finite number. Ignored, a
+    bad bound counted every reading as in the band, a confident wrong answer;
+    NaN compared false and counted none."""
+    out = []
+    for p in ("value_min", "value_max"):
+        v = args.get(p)
+        if v in (None, ""):
+            continue
+        try:
+            number = float(v)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            out.append(Rejection(p, "must be a number"))
+            continue
+        if isinstance(v, bool) or not math.isfinite(number):
+            out.append(Rejection(p, "must be a finite number"))
+    if not out and all(args.get(p) not in (None, "") for p in ("value_min", "value_max")):
+        if float(args["value_min"]) > float(args["value_max"]):  # type: ignore[arg-type]
+            out.append(Rejection("value_min", "is above value_max"))
+    return out
+
+
 def validate_request(args: Mapping[str, object]) -> tuple[Rejection, ...]:
     """Everything wrong with the raw arguments, in a stable order. Empty
     means :func:`parse_request` will succeed. Checks the enums, the selection
-    rule and the dates.
+    rule, the dates and the value band.
 
     A view with no selection is not refused: it is a catalogue call
     (:attr:`QueryRequest.view_unapplied`). Refused, MiniCPM5-2B opened with
@@ -703,6 +737,7 @@ def validate_request(args: Mapping[str, object]) -> tuple[Rejection, ...]:
     if len(selectors) > 1:
         out.append(Rejection("keywords+indicators", "give keywords or indicators — not both"))
     out.extend(reject_dates(args))
+    out.extend(reject_bounds(args))
     return tuple(out)
 
 
@@ -746,7 +781,8 @@ class HealthQuery(Protocol):
     def catalog(self, subject_id: str, window: Window | None) -> Rows: ...
     def readings(self, subject_id: str, sel: Selection, window: Window, *, limit: int) -> Rows: ...
     def buckets(self, subject_id: str, sel: Selection, window: Window, *, resolution: str, limit: int) -> Rows: ...
-    def stats(self, subject_id: str, sel: Selection, window: Window) -> Rows: ...
+    def stats(self, subject_id: str, sel: Selection, window: Window, *,
+              value_min: float | None = None, value_max: float | None = None) -> Rows: ...
     def latest(self, subject_id: str, sel: Selection, window: Window) -> Rows: ...
 
 
@@ -772,6 +808,7 @@ __all__ = [
     "parse_bound",
     "parse_request",
     "rank_catalog",
+    "reject_bounds",
     "reject_dates",
     "reject_unknown",
     "resolve_window",
