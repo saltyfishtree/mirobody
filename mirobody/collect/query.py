@@ -540,6 +540,13 @@ class PostgresHealthQuery:
                          AND (CAST(:vmax AS DOUBLE PRECISION) IS NULL
                               OR value_num <= CAST(:vmax AS DOUBLE PRECISION))
                    ) AS count_in_range,
+                   COUNT(DISTINCT local_date) AS days,
+                   COUNT(DISTINCT local_date) FILTER (
+                       WHERE (CAST(:vmin AS DOUBLE PRECISION) IS NULL
+                              OR value_num >= CAST(:vmin AS DOUBLE PRECISION))
+                         AND (CAST(:vmax AS DOUBLE PRECISION) IS NULL
+                              OR value_num <= CAST(:vmax AS DOUBLE PRECISION))
+                   ) AS days_in_range,
                    {_STAT_VALUE.format(agg="MIN")} AS min,
                    {_STAT_VALUE.format(agg="MAX")} AS max,
                    {_STAT_AVG} AS avg,
@@ -928,6 +935,11 @@ def _stats_row(r: dict) -> dict:
         "count": int(r.get("count") or 0),
         "numeric_count": int(r.get("numeric_count") or 0),
         "count_in_range": int(r.get("count_in_range") or 0),
+        # A day count answers "how many days" exactly, which `count` does not:
+        # a heart-rate series has many readings a day, and 392 of PHIA's 4,000
+        # objective questions ask how many days something happened.
+        "days": int(r.get("days") or 0),
+        "days_in_range": int(r.get("days_in_range") or 0),
         "min": _number(r.get("min")),
         "max": _number(r.get("max")),
         "avg": _number(r.get("avg")),

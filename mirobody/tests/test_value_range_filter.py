@@ -64,3 +64,34 @@ def test_the_band_count_reaches_the_model():
                               meta=tools.Meta(view="stats", row_count=1))
     text = _render.render_compact(envelope)
     assert "count_in_range=4" in text, text[:300]
+
+
+def test_stats_counts_days_not_only_readings():
+    """`count` counts readings; a heart-rate series has many a day, so "how
+    many days did X happen" needs a day count — 392 of PHIA's 4,000 objective
+    questions ask exactly that, and the tool offered no day figure at all.
+    """
+    from mirobody.collect import query as collect_query
+
+    # The columns are built inline in `stats()`; assert on its own SQL.
+    import inspect
+
+    body = inspect.getsource(collect_query.PostgresHealthQuery.stats)
+    assert "COUNT(DISTINCT local_date) AS days" in body
+    assert "days_in_range" in body
+
+
+def test_both_day_counts_reach_the_model():
+    """`days` and `days_in_range` are read only if the stats table names them;
+    the column list is fixed, so a row field alone is invisible to the model."""
+    from mirobody.agent.tools import _render
+    from mirobody.kernel import tools
+
+    row = {"indicator": "restingHeartRates", "count": 30, "numeric_count": 30, "count_in_range": 12,
+           "days": 30, "days_in_range": 12, "min": 55.0, "max": 72.0, "avg": 62.0, "sum": 1860.0,
+           "first": "60", "first_date": "2023-10-01", "last": "63", "last_date": "2023-10-30",
+           "unit": "bpm"}
+    envelope = tools.Envelope(tools.STATUS_OK, data=[row],
+                              meta=tools.Meta(view="stats", row_count=1))
+    text = _render.render_compact(envelope)
+    assert "days=30" in text and "days_in_range=12" in text, text[:300]
