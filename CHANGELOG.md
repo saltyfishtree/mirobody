@@ -2,6 +2,18 @@
 
 ### Fixed
 
+- **An empty window says it is empty, not that the record lacks the
+  indicator.** When a named window held none of the readings a selection
+  matched, `query_health_indicators` fell back to the catalogue under "no
+  indicator matched those terms" and added "no data for an indicator means it
+  was never recorded". Both are false for a series the record holds outside
+  the window, and a local 2B answering PHIA's objective set concluded exactly
+  that in 11% of its failures. The tool now reads the selection's
+  whole-record statistics before falling back: when it matched, the answer
+  is zero rows with "0 readings between <start> and <end>" and each
+  indicator's count and first and last dates; only a selection that matches
+  nothing falls back. How to tell: `pytest mirobody/tests/test_absence_semantics.py`.
+
 - **Oura's and WHOOP's nightly sleep totals are filed as the night's
   figures.** Deep, light and REM sleep, awake time, latency and the sleeping
   heart and breathing rates are totals over a whole sleep, and the decoders

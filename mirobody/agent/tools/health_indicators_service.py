@@ -199,11 +199,22 @@ class HealthIndicatorsService(RecordTool):
         method = request.method
         rows = await self._dispatch(hq, method, subject_id, request, window)
 
+        # An empty answer to a named window has two causes: the selection
+        # matched no series, or it matched series with nothing in the window.
+        # Both used to fall back to the catalogue under "no indicator matched
+        # those terms", and asked how many days last week had little deep
+        # sleep, a local 2B answered that the record had no deep sleep while
+        # it held months of it (PHIA's objective set, 11% of its failures).
+        # The whole record's stats tell the two apart.
+        elsewhere: Sequence[Mapping[str, Any]] = ()
+        if not rows and method != "catalog" and (request.start or request.end):
+            elsewhere = await awaited(hq.stats(subject_id, request.selection, query.Window(0, 0, tz)))
+
         # Nothing matched a selection the caller DID give: answer with what the
         # person actually has rather than with an empty table. The alternative
         # costs a model call to learn the names, every time.
         fell_back = False
-        if not rows and method != "catalog":
+        if not rows and not elsewhere and method != "catalog":
             rows = await self._dispatch(hq, "catalog", subject_id, request, window)
             method, fell_back = "catalog", True
 
@@ -211,10 +222,10 @@ class HealthIndicatorsService(RecordTool):
             rows = await _with_rids(CITATION_SESSION.get(), subject_id, method, request, window, rows)
 
         outside = ""
-        if self._outside_note and method != "catalog" and (request.start or request.end):
+        if self._outside_note and method != "catalog" and rows and (request.start or request.end):
             outside = _outside_note(await awaited(hq.catalog(subject_id, None)), rows, window)
         return _envelope_for(method, request, window, rows, fell_back=fell_back, bucket_cap=self._bucket_cap,
-                             row_cap=self._row_cap, outside=outside)
+                             row_cap=self._row_cap, outside=outside, elsewhere=elsewhere)
 
     async def _dispatch(
         self, hq: Any, method: str, subject_id: str, request: query.QueryRequest, window: query.Window
@@ -287,6 +298,7 @@ def _envelope_for(
     bucket_cap: int = query.BUCKET_CAP,
     row_cap: int = query.ROW_CAP,
     outside: str = "",
+    elsewhere: Sequence[Mapping[str, Any]] = (),
 ) -> tools.Envelope:
     rows = list(rows)
     dated = bool(request.start or request.end)
@@ -322,6 +334,8 @@ def _envelope_for(
         assumptions.append(window.note)
     if outside:
         assumptions.append(outside)
+    if elsewhere:
+        assumptions.append(_elsewhere_note(elsewhere, window))
     if fell_back:
         assumptions.append("no indicator matched those terms; this is what this person has on file")
         # A window outside the record answers nothing, and the model used today's date for a
@@ -367,7 +381,9 @@ def _envelope_for(
         assumptions.append(_DAY_VALUE_NOTE)
     if semantics == query.SEMANTICS_DATE_PADDED:
         assumptions.append("some rows predate the stored local day; their window is padded a day each way")
-    assumptions.append(_ABSENCE_NOTE)
+    if not elsewhere:
+        # "never recorded" is false of a series the record holds elsewhere.
+        assumptions.append(_ABSENCE_NOTE)
     if any(r.get("rid") for r in rows):
         assumptions.append(RID_NOTE)
     unverified = sorted({str(r.get("indicator") or r.get("name") or "") for r in rows
@@ -390,18 +406,8 @@ def _envelope_for(
         next_steps.append(tools.NEXT_USE_INDICATORS)
         if truncated:
             next_steps.append(tools.NEXT_NARROW_WINDOW)
-    elif not rows:
+    elif not rows and not elsewhere:
         next_steps.append(tools.NEXT_PICK_FROM_CATALOG)
-        # A window with nothing in it is a real answer, and it has two causes a
-        # reader must be able to tell apart: the person has no such series, or
-        # the series has no reading in this window. Saying only "(no rows)"
-        # leaves a model to conclude the record lacks the metric — measured on
-        # PHIA's objective set, 11% of the failures said exactly that.
-        assumptions.append(
-            "0 readings: nothing for these indicators between "
-            f"{window.start or 'the first record'} and {window.end or 'the last record'} "
-            f"in this view; the series may exist outside the window, and the catalogue "
-            "call with no keywords lists what the record does hold")
     elif truncated:
         next_steps.extend((tools.NEXT_NARROW_WINDOW, tools.NEXT_VIEW_STATS))
     if unavailable:
@@ -474,9 +480,7 @@ def _outside_note(catalog: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[s
     default span, so the bounds compared are the ones the rows were read
     from, not the dates the caller wrote."""
     answered = {str(r.get("series") or "") for r in rows} - {""}
-    zone = series.zone(window.tz)
-    first_day = datetime.fromtimestamp(window.start_ms / 1000, zone).date().isoformat()
-    last_day = datetime.fromtimestamp((window.end_ms - 1) / 1000, zone).date().isoformat()
+    first_day, last_day = _window_days(window)
     outside = []
     for entry in catalog:
         if str(entry.get("series") or "") not in answered:
@@ -493,6 +497,28 @@ def _outside_note(catalog: Sequence[Mapping[str, Any]], rows: Sequence[Mapping[s
         return ""
     return (f"this window ({first_day}..{last_day}) leaves out readings of " + "; ".join(outside)
             + "; call again with a wider start or end to include them")
+
+
+def _window_days(window: query.Window) -> tuple[str, str]:
+    """The first and last local day a resolved window covers. With one end
+    named the other is the default span, so these are the days the rows were
+    read from, not the dates the caller wrote."""
+    zone = series.zone(window.tz)
+    first_day = datetime.fromtimestamp(window.start_ms / 1000, zone).date().isoformat()
+    last_day = datetime.fromtimestamp((window.end_ms - 1) / 1000, zone).date().isoformat()
+    return first_day, last_day
+
+
+def _elsewhere_note(stats: Sequence[Mapping[str, Any]], window: query.Window) -> str:
+    """The answer to a window that holds none of the readings the selection
+    matched: zero, and where the readings are, so "none last week" is not
+    read as "none ever"."""
+    first_day, last_day = _window_days(window)
+    held = "; ".join(f"{r.get('indicator')} has {r.get('count')} from {r.get('first_date')} to {r.get('last_date')}"
+                     for r in stats)
+    return (f"0 readings between {first_day} and {last_day}. The record does hold these indicators, all outside "
+            f"this window: {held}. The answer for this window is that it has none; to read them, call again "
+            "with dates inside those spans")
 
 
 def _day_before(stamp: str) -> str:
