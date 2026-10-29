@@ -44,3 +44,23 @@ def test_the_schema_offers_both_bounds():
     properties = query.TOOL_SCHEMA["properties"]
     assert "value_min" in properties and "value_max" in properties
     assert properties["value_min"]["type"] == "number"
+
+
+def test_the_band_count_reaches_the_model():
+    """A column the renderer does not list never reaches the model. The stats
+    table is a fixed column list, so `count_in_range` had to be added to it as
+    well as to the row — otherwise the SQL computed a number nobody could read.
+
+    This renders a real envelope rather than checking the tuple: the failure
+    this guards against happened *after* the row was correct.
+    """
+    from mirobody.agent.tools import _render
+    from mirobody.kernel import tools
+
+    row = {"indicator": "dailyDeepSleep", "count": 7, "count_in_range": 4, "min": 30.0,
+           "max": 120.0, "avg": 70.0, "sum": 490.0, "first": "45", "first_date": "2023-10-25",
+           "last": "60", "last_date": "2023-10-31", "change": 15.0, "unit": "min"}
+    envelope = tools.Envelope(tools.STATUS_OK, data=[row],
+                              meta=tools.Meta(view="stats", row_count=1))
+    text = _render.render_compact(envelope)
+    assert "count_in_range=4" in text, text[:300]
