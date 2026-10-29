@@ -20,3 +20,18 @@ def test_the_median_respects_the_unit_guard():
 
     for macro in (collect_query._STAT_MEDIAN, collect_query._STAT_STDDEV):
         assert "COUNT(DISTINCT unit_ucum) <= 1" in str(macro)
+
+
+def test_the_new_statistics_reach_the_model():
+    """`median` and `stddev` are read by the model only if the stats table
+    names them; the column list is fixed, so a row field alone is invisible."""
+    from mirobody.agent.tools import _render
+    from mirobody.kernel import tools
+
+    row = {"indicator": "restingHeartRates", "count": 30, "min": 55.0, "max": 72.0, "avg": 62.0,
+           "median": 61.5, "stddev": 3.62, "sum": 1860.0, "first": "60", "first_date": "2023-10-01",
+           "last": "63", "last_date": "2023-10-30", "unit": "bpm"}
+    envelope = tools.Envelope(tools.STATUS_OK, data=[row],
+                              meta=tools.Meta(view="stats", row_count=1))
+    text = _render.render_compact(envelope)
+    assert "median=61.5" in text and "stddev=3.62" in text, text[:300]
