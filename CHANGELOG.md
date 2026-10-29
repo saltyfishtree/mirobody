@@ -58,6 +58,19 @@
   the new shape and `TERMINOLOGY_VERSION` is 1.5.10. How to tell:
   `pytest mirobody/tests/test_workout_zones.py`.
 
+- **Breathing disturbances are no longer filed as awakenings.**
+  open-wearables' `sleeping_breathing_disturbances` is Apple's
+  `appleSleepingBreathingDisturbances` relayed (open-wearables maps that
+  HealthKit type to it, and no other provider sends it), and
+  `open_wearables.tsv` filed it under `sleepDisturbances`, 103211-9 Number of
+  awakenings, so a night's count of interrupted breathing read as that many
+  awakenings in `dailyTotalSleepDisturbances`. Apple counts wrist movements
+  tied to interrupted breathing and says they are not an AHI, and `apple.tsv`
+  already declined the quantity. The row is now an explicit decline with that
+  reason and the decoder quarantines the type; the table maps 48 types and
+  declines 45. How to tell:
+  `pytest mirobody/tests/test_engine_coverage.py -k open_wearables`.
+
 - **`view="stats"` exposes a median and sample standard deviation to every
   caller.** These statistics were unavailable, and adding them to the SQL row
   alone still left them hidden from the compact output chat and MCP models
