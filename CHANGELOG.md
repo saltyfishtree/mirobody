@@ -2,23 +2,96 @@
 
 ### Fixed
 
-- **A counting question is now expressible.** "How many days did I sleep more
-  than six hours" is a value band plus a count, and the tool answered it with
-  the whole series, leaving both to the model. Asked PHIA's *"how many days in
-  the past week did I get less than 1 hour of deep sleep"*, a local 2B replied
-  `30.75` — a duration — instead of a number of days. `query_health_indicators`
-  takes `value_min` / `value_max` (in the series' own unit) and `view="stats"`
-  now reports `count_in_range` beside the whole-window count, so the count is
-  read rather than derived. The agent is still the one that has to ask for it:
-  no guidance pointing at this parameter is given to any model, because that
-  would be fitting the prompt to a benchmark rather than fixing the tool.
-- **`view="stats"` counts days, not only readings.** 392 of PHIA's 4,000
-  objective questions ask "how many days" something happened, and the stats row
-  offered `count` (readings) — for a heart-rate series, six of them a day, that
-  is not a day count. It now carries `days` (`COUNT(DISTINCT local_date)`) and
-  `days_in_range`, the same day count over the `value_min`/`value_max` band, so
-  "how many days was my resting heart rate above 70" reads the answer instead
-  of inferring it.
+- **Oura's and WHOOP's nightly sleep totals are filed as the night's
+  figures.** Deep, light and REM sleep, awake time, latency and the sleeping
+  heart and breathing rates are totals over a whole sleep, and the decoders
+  filed them under the interval metrics (`sleepAnalysis_*`) or the point
+  series (`heartRates`, `respiratoryRates`) with the sleep's start..end. A
+  duration union then read every stage as the whole night (90 minutes of deep
+  sleep became 480), and Oura's sleeping heart rate became the day's
+  average. They now go to the `daily…` summaries, as Garmin's already did, on
+  the day the vendor files the night under (Oura's `day`; the day a WHOOP
+  sleep ends), and only from the main sleep: an Oura nap, a WHOOP nap, and an
+  Oura sleep the user deleted or rejected no longer replace the night. WHOOP's
+  cycle average and maximum heart rate go to `dailyHeartRateAvg` and
+  `dailyHeartRateMax`. Rows already stored keep their old names and days; a
+  re-sync of a night already stored adds the new reading beside the old one.
+  How to tell: `pytest mirobody/tests/test_nightly_sleep_figures.py`.
+
+- **A workout's distance is an exercise distance, and an increment is not a
+  daily total.** Oura's `workout.distance` and WHOOP's
+  `workout.score.distance_meter` cover any sport and were filed under
+  `walkingRunningDistances` (112427-0, walking or running only); both decoders
+  and tables now use `exerciseDistances` (55412-1). Fitbit's
+  `activities-distance` ("the specified resource's daily total") and Honor's
+  daily `DISTANCE` statistic now name `dailyDistance`, unverified because
+  Fitbit calculates it from steps and Honor publishes no field or unit for it.
+  Health Connect's `DistanceRecord` and Huawei's `distance.delta` stay
+  unmapped: each is "distance since the last reading", and `dailyDistance`
+  keeps one value a day. The Oura and WHOOP tables are now held to their
+  decoders by a test, and say what the decoders file for WHOOP's cycle energy
+  (`dailyTotalCalories`), its workout heart rate and Oura's daily sleep score.
+
+- **`view="stats"` exposes a median and sample standard deviation to every
+  caller.** These statistics were unavailable, and adding them to the SQL row
+  alone still left them hidden from the compact output chat and MCP models
+  read. Both the row and the model's table now carry `median`
+  (`PERCENTILE_CONT(0.5)`) and `stddev` (`STDDEV_SAMP`), using the mean's unit
+  guard. Zero remains visible; a single numeric reading has a median but no
+  sample standard deviation. Incompatible units yield no invented statistic.
+
+- **A sleep score summarises to the score, not to the night's length.**
+  `sleepEfficiency`, `sleepPerformance`, `sleepConsistency` (percent) and
+  `sleepDisturbances` (a count) are one figure a vendor computes for one
+  sleep, but the catalogue gave them a sleep stage's shape
+  (`session`/`duration_union`), so `series.aggregate` ignored the value and
+  returned the minutes the sleep spans: WHOOP's 91% efficiency became 480,
+  Oura's 93% became 450, and a count with no span became nothing. They are
+  now `instant`/`last`, as `sleepQuality` already was: a re-scored sleep
+  replaces its earlier score instead of being averaged with it.
+  `TERMINOLOGY_VERSION` is 1.5.10. Stored data is untouched: the four stay
+  `series` on the 18:00 day, so readings land in the same table on the same
+  day, and `dailyAvgSleepEfficiency` and `dailyTotalSleepDisturbances`, which
+  read the values all along, are identical before and after on PostgreSQL. A
+  nap on the same 18:00 day still replaces the night's score, because the
+  decoders file naps under the same names. How to tell:
+  `pytest mirobody/tests/test_sleep_scores.py`, which also refuses
+  `duration_union` for any metric whose unit is not a time.
+
+- **A crosswalk row that names a code but no indicator now says so.** The
+  runtime needs a mapped metric, so a candidate LOINC alone does not establish
+  an active mapping. Such rows now carry an explicit unmapped marker without
+  claiming the catalogue lacks that code. Honor's elevation remains unmapped
+  because its distinct vendor field has not been verified: sharing the
+  distance permission scope cannot identify a measurement. Regression tests
+  check both the notes and the actual scope lookup.
+
+- **Health Connect activity intensity is filed by level, not by position.**
+  The record carries `moderate` and `vigorous` only — there is no light tier —
+  and the two rows left the field blank and mapped to light (101688-0) and
+  moderate (101689-8). Two blank fields are also one key, so the resolver saw a
+  two-row group it could not disambiguate and filed neither. They now name
+  `moderate` and `vigorous` against 101689-8 and 101690-6.
+
+- **Vendor crosswalks corrected against the vendors' own documentation.** A
+  field-by-field review of Apple, Fitbit, Garmin, Huawei and Samsung (235 rows)
+  found seven mappings whose catalogue quantities did not match the fields.
+  Molar blood glucose now names `bloodGlucoseMoles` (`15074-8`), while printed
+  mass units still select the mass-concentration sibling during coding.
+  Huawei's altitude, metres sampled per moment, was mapped to
+  "Elevation climbed" and now uses `41905-1` (new `altitudes`); Fitbit's and
+  Huawei's awake-at-night duration is WASO and now uses `103215-0` (new `waso`);
+  Fitbit's daily step series now targets `dailySteps` (41950-7) instead of the
+  unspecified-time indicator; Apple's step *length* (metres) no longer lands in
+  the step *duration* (ms) series; and Samsung's apnoea field, an enum of
+  detected / not detected, is no longer read as an AHI index.
+
+- **Valid LOINC units no longer exclude queryable laboratory orders.** The
+  generator accepted only a small hand-written unit list, dropping orders
+  whose declared UCUM unit was already supported by the unit-family table.
+  Both sources now validate the code's PROPERTY, admitting 352 additional
+  catalogue rows. Their displays, numeric readings, units and six LOINC axes
+  are checked against the source manifest.
 
 - **Distance is split the way LOINC splits it.** LOINC names four activities'
   distance separately — 93817-5 Running distance, 93816-7 Swimming distance,
@@ -28,6 +101,18 @@
   on the walking-or-running indicator and answered "how far did I walk" with
   the running figure. The catalogue carries the four now, so a source that
   knows the activity can file it where LOINC puts it.
+
+- **The alias index keeps the names LOINC actually prints.** The key cap was 50
+  characters, carried over from the index this replaced, and it dropped 81 of
+  the 287 codes this catalogue carries: their official long names are longer
+  ("Lactate dehydrogenase [Enzymatic activity/volume] in Serum or Plasma by
+  Lactate to pyruvate reaction" is 112). The cap is now 120, which is above
+  every laboratory designation in LOINC 2.83; the classifier-word cap still
+  refuses anything that names hundreds of codes. Measured on the catalogue:
+  long-name recall 73.9% -> 99.3%, short-name 99.3%, and the names a code
+  carried before its current one ("Lactate Dehydrogenase (LDH), Blood") answer
+  again — 721 -> 1,128 of 1,159 — so no override rows are needed for them. The
+  bundle grows 12.7 -> 17.1 MB.
 
 - **A keyword search reaches every series that shares a name.** `_by_keywords`
   kept one series per printed or display name (`dict.setdefault`), so when a
