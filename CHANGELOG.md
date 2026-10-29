@@ -12,6 +12,13 @@
   read rather than derived. The agent is still the one that has to ask for it:
   no guidance pointing at this parameter is given to any model, because that
   would be fitting the prompt to a benchmark rather than fixing the tool.
+- **`view="stats"` counts days, not only readings.** 392 of PHIA's 4,000
+  objective questions ask "how many days" something happened, and the stats row
+  offered `count` (readings) — for a heart-rate series, six of them a day, that
+  is not a day count. It now carries `days` (`COUNT(DISTINCT local_date)`) and
+  `days_in_range`, the same day count over the `value_min`/`value_max` band, so
+  "how many days was my resting heart rate above 70" reads the answer instead
+  of inferring it.
 
 - **Distance is split the way LOINC splits it.** LOINC names four activities'
   distance separately — 93817-5 Running distance, 93816-7 Swimming distance,
