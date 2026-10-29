@@ -32,6 +32,18 @@
   decoders by a test, and say what the decoders file for WHOOP's cycle energy
   (`dailyTotalCalories`), its workout heart rate and Oura's daily sleep score.
 
+- **A nap no longer replaces the night's sleep scores.** WHOOP scores a nap
+  under the night's efficiency, performance, consistency and disturbance
+  fields, Oura under its `efficiency` and `restless_periods`, and an afternoon
+  nap falls in the night's 18:00 day. A night of 91 % and a nap of 80 % read
+  80 as the day's last score and 85.5 as `dailyAvgSleepEfficiency`, and the
+  night's 12 disturbances plus the nap's one made `dailyTotalSleepDisturbances`
+  13. These scores now come from the main sleep only, the rule the nightly
+  totals follow (WHOOP `nap` not true; Oura `type` `long_sleep` or absent). A
+  nap's score is not filed at all: the catalogue has no nap score, only
+  `napDuration`. Rows already stored are not rewritten. How to tell:
+  `pytest mirobody/tests/test_nightly_sleep_figures.py -k scores`.
+
 - **`view="stats"` exposes a median and sample standard deviation to every
   caller.** These statistics were unavailable, and adding them to the SQL row
   alone still left them hidden from the compact output chat and MCP models

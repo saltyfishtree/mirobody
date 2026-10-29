@@ -108,6 +108,16 @@ NIGHTLY: frozenset[str] = frozenset({
     "score.respiratory_rate",
 })
 
+#: One sleep's scores, filed with the sleep's own span and never from a nap.
+#: WHOOP scores a nap under the same four fields and a nap falls in the
+#: night's 18:00 day, so a night of 91 % and a nap of 80 % averaged to 85.5 in
+#: ``dailyAvgSleepEfficiency`` and the nap's 80 was the day's last score. The
+#: catalogue has no nap score to file it under; ``napDuration`` is a duration.
+SCORES: frozenset[str] = frozenset({
+    "score.sleep_efficiency_percentage", "score.sleep_performance_percentage",
+    "score.sleep_consistency_percentage", "score.stage_summary.disturbance_count",
+})
+
 
 def window_ms(data_type: str, item: dict, tz: str, pulled_at_ms: int) -> tuple[int, int]:
     """The instant or span a record describes, ``(0, 0)`` when it carries
@@ -162,11 +172,10 @@ def decode(
                 if total > 0:
                     emit(metric, ms_to_min(total))
     for path, (metric, conv) in mapping.items():
-        nightly = data_type == "sleep" and path in NIGHTLY
-        if nightly and night is None:
+        if data_type == "sleep" and night is None and (path in NIGHTLY or path in SCORES):
             continue
         v = number(dig(item, path))
         if v is None:
             continue
-        emit(metric, float(conv(v)), night if nightly else None)
+        emit(metric, float(conv(v)), night if data_type == "sleep" and path in NIGHTLY else None)
     return out
