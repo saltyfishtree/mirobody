@@ -681,3 +681,28 @@ async def test_a_value_band_is_not_counted_over_steps_stored_as_increments(datab
     assert row["code"] == "55423-8"
     assert row["count_in_range"] is None and row["days_in_range"] is None
     assert any(a.startswith("no band was counted for") for a in envelope.assumptions)
+
+
+async def test_an_empty_window_names_the_readings_the_record_holds_elsewhere(database):
+    """A window holding none of a series' readings is zero there, not a
+    record without the series; the whole-record stats say where it is."""
+    from mirobody.agent.tools.health_indicators_service import HealthIndicatorsService
+    from mirobody.collect import observations
+    from mirobody.collect.query import PostgresHealthQuery
+
+    drafts = [observations.Draft(name_text="ALT", value_text=str(20 + day), unit_text="U/L",
+                                 observed_start=datetime(2026, 3, day, 8, tzinfo=UTC)) for day in (2, 9, 16)]
+    await observations.ingest("1", drafts, observations.Provenance("lab-report", "file", "th_files:synthetic-elsewhere"),
+                              user_tz="UTC")
+    service = HealthIndicatorsService(PostgresHealthQuery(), outside_note=False)
+    envelope = await service.envelope({"user_id": "1"}, indicators=["ALT"], start="2026-10-01", end="2026-10-07",
+                                      view="day")
+    assert envelope.meta.row_count == 0
+    note = next(a for a in envelope.assumptions if a.startswith("0 readings"))
+    assert "between 2026-10-01 and 2026-10-07" in note
+    assert "has 3 from 2026-03-02 to 2026-03-16" in note
+    assert not any("no indicator matched" in a for a in envelope.assumptions)
+
+    missing = await service.envelope({"user_id": "1"}, indicators=["Ferritin"], start="2026-10-01",
+                                     end="2026-10-07", view="day")
+    assert any("no indicator matched" in a for a in missing.assumptions)
